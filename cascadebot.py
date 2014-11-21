@@ -258,7 +258,20 @@ class BitfinexAPI(object):
         headers = {"X-BFX-APIKEY": self.api_key,
                    "X-BFX-PAYLOAD": payload,
                    "X-BFX-SIGNATURE": signature.hexdigest()}
-        request = requests.post(url, headers=headers)
+        request = None
+        retry_count = 0
+        while request is None:
+            try:
+                request = requests.post(url, headers=headers)
+            except requests.exceptions.ConnectionError:
+                delay = 2 ** retry_count
+                print("Connection failed, sleeping for", delay,
+                      "seconds before retrying")
+                time.sleep(delay)
+                retry_count += 1
+                # I'm assuming that if we don't manage to connect, it doesn't
+                # count against our request limit. If this isn't the case, then
+                # we should call _rate_limiter() here too.
         if request.status_code != 200:
             print(request.text)
             request.raise_for_status()

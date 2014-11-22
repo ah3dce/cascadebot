@@ -36,7 +36,7 @@ LEND_BTC = True
 USD_START_RATE_PERCENT = Decimal("365.0")
 
 # Don't reduce our USD offers below this rate, in percentage per year
-USD_MINIMUM_RATE_PERCENT = Decimal("20.0")
+USD_MINIMUM_RATE_PERCENT = Decimal("YOU HAVE TO PICK THIS ONE YOURSELF")
 
 # How often to reduce the rates on our unfilled USD offers
 USD_RATE_DECREMENT_INTERVAL = timedelta(hours=1)
@@ -56,7 +56,7 @@ USD_MINIMUM_LEND_AMOUNT = Decimal("50.0")
 BTC_START_RATE_PERCENT = Decimal("20.0")
 
 # Don't reduce our BTC offers below this rate, in percentage per year
-BTC_MINIMUM_RATE_PERCENT = Decimal("2.0")
+BTC_MINIMUM_RATE_PERCENT = Decimal("YOU HAVE TO PICK THIS ONE YOURSELF")
 
 # How often to reduce the rates on our unfilled BTC offers
 BTC_RATE_DECREMENT_INTERVAL = timedelta(hours=1)

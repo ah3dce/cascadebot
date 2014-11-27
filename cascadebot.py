@@ -261,17 +261,24 @@ class BitfinexAPI(object):
         request = None
         retry_count = 0
         while request is None:
+            status_string = None
             try:
                 request = requests.post(url, headers=headers)
             except requests.exceptions.ConnectionError:
+                status_string = "Connection failed,"
+            if request and request.status_code == 500:
+                request = None
+                status_string = "500 internal server error,"
+            if request is None:
                 delay = 2 ** retry_count
-                print("Connection failed, sleeping for", delay,
+                print(status_string, "sleeping for", delay,
                       "seconds before retrying")
                 time.sleep(delay)
                 retry_count += 1
-                # I'm assuming that if we don't manage to connect, it doesn't
-                # count against our request limit. If this isn't the case, then
-                # we should call _rate_limiter() here too.
+                # I'm assuming that if we don't manage to connect, or we get a
+                # 500 internal server error, it doesn't count against our
+                # request limit. If this isn't the case, then we should call
+                # _rate_limiter() here too.
         if request.status_code != 200:
             print(request.text)
             request.raise_for_status()

@@ -39,11 +39,22 @@ USD_START_RATE_PERCENT = Decimal("365.0")
 USD_MINIMUM_RATE_PERCENT = Decimal("YOU HAVE TO PICK THIS ONE YOURSELF")
 
 # How often to reduce the rates on our unfilled USD offers
-USD_RATE_DECREMENT_INTERVAL = timedelta(hours=1)
+USD_RATE_REDUCTION_INTERVAL = timedelta(hours=1)
 
 # How much to reduce the rates on our unfilled USD offers, in percentage per
 # year
 USD_RATE_DECREMENT_PERCENT = Decimal("35.0")
+
+# ADVANCED: Use this to reduce interest rates exponentially instead of
+# linearly. If you don't understand what this means, don't change this
+# parameter (leave it at "1.0"). Interest rates will decay towards the minimum
+# value rather than towards zero:
+#
+#   new_rate = (current_rate - min_rate) * multiplier + min_rate
+#
+# If you use this, you should set USD_RATE_DECREMENT_PERCENT to zero, otherwise
+# both reductions will be applied.
+USD_RATE_EXPONENTIAL_DECAY_MULTIPLIER = Decimal("1.0")
 
 # How many days we're willing to lend our USD funds for
 USD_LEND_PERIOD_DAYS = 30
@@ -59,11 +70,22 @@ BTC_START_RATE_PERCENT = Decimal("20.0")
 BTC_MINIMUM_RATE_PERCENT = Decimal("YOU HAVE TO PICK THIS ONE YOURSELF")
 
 # How often to reduce the rates on our unfilled BTC offers
-BTC_RATE_DECREMENT_INTERVAL = timedelta(hours=1)
+BTC_RATE_REDUCTION_INTERVAL = timedelta(hours=1)
 
 # How much to reduce the rates on our unfilled BTC offers, in percentage per
 # year
 BTC_RATE_DECREMENT_PERCENT = Decimal("2.0")
+
+# ADVANCED: Use this to reduce interest rates exponentially instead of
+# linearly. If you don't understand what this means, don't change this
+# parameter (leave it at "1.0"). Interest rates will decay towards the minimum
+# value rather than towards zero:
+#
+#   new_rate = (current_rate - min_rate) * multiplier + min_rate
+#
+# If you use this, you should set BTC_RATE_DECREMENT_PERCENT to zero, otherwise
+# both reductions will be applied.
+BTC_RATE_EXPONENTIAL_DECAY_MULTIPLIER = Decimal("1.0")
 
 # How many days we're willing to lend our BTC funds for
 BTC_LEND_PERIOD_DAYS = 30
@@ -127,11 +149,13 @@ class Offer(object):
         if self.currency == "USD":
             min_rate = USD_MINIMUM_RATE_PERCENT
             rate_decrement = USD_RATE_DECREMENT_PERCENT
-            decrement_interval = USD_RATE_DECREMENT_INTERVAL
+            decay_multiplier = USD_RATE_EXPONENTIAL_DECAY_MULTIPLIER
+            decrement_interval = USD_RATE_REDUCTION_INTERVAL
         elif self.currency == "BTC":
             min_rate = BTC_MINIMUM_RATE_PERCENT
             rate_decrement = BTC_RATE_DECREMENT_PERCENT
-            decrement_interval = BTC_RATE_DECREMENT_INTERVAL
+            decay_multiplier = BTC_RATE_EXPONENTIAL_DECAY_MULTIPLIER
+            decrement_interval = BTC_RATE_REDUCTION_INTERVAL
         else:
             raise Exception("Unrecognized currency string")
 
@@ -141,8 +165,14 @@ class Offer(object):
         intervals_elapsed = time_elapsed // decrement_interval
         if intervals_elapsed < 1:
             return None
-        total_reduction = rate_decrement * intervals_elapsed
-        new_rate = self.rate - total_reduction
+        new_rate = self.rate
+        for i in range(intervals_elapsed):
+            # Apply the linear reduction first, then the exponential. If the
+            # user didn't do something weird with the configuration, only one
+            # will actually have an effect.
+            new_rate -= rate_decrement
+            # Asymptote at min_rate rather than at zero
+            new_rate = (new_rate - min_rate) * decay_multiplier + min_rate
         return max(new_rate, min_rate)
 
 
